@@ -1,0 +1,8 @@
+{
+    "file_format_version": "1.0.0",
+    "ICD": {
+        "library_path": "@THIS_DIR@$<TARGET_FILE_NAME:vk_mock_icd>",
+        "api_version": "@VK_MOCK_ICD_API_VERSION@",
+        "library_arch": "@VK_MOCK_ICD_ARCH@"
+    }
+}
