@@ -38,6 +38,22 @@ namespace vkmock
         VkResult vkCreateWin32SurfaceKHR( const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
 #endif
 
+#ifdef VK_KHR_xlib_surface
+        VkResult vkCreateXlibSurfaceKHR( const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
+#endif
+
+#ifdef VK_KHR_xcb_surface
+        VkResult vkCreateXcbSurfaceKHR( const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
+#endif
+
+#ifdef VK_KHR_wayland_surface
+        VkResult vkCreateWaylandSurfaceKHR( const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
+#endif
+
+#ifdef VK_KHR_android_surface
+        VkResult vkCreateAndroidSurfaceKHR( const VkAndroidSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
+#endif
+
 #ifdef VK_KHR_surface
         void vkDestroySurfaceKHR( VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator );
 #endif

@@ -90,6 +90,34 @@ namespace vkmock
     }
 #endif
 
+#ifdef VK_KHR_xlib_surface
+    VkResult Instance::vkCreateXlibSurfaceKHR( const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
+    {
+        return vk_new( pSurface );
+    }
+#endif
+
+#ifdef VK_KHR_xcb_surface
+    VkResult Instance::vkCreateXcbSurfaceKHR( const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
+    {
+        return vk_new( pSurface );
+    }
+#endif
+
+#ifdef VK_KHR_wayland_surface
+    VkResult Instance::vkCreateWaylandSurfaceKHR( const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
+    {
+        return vk_new( pSurface );
+    }
+#endif
+
+#ifdef VK_KHR_android_surface
+    VkResult Instance::vkCreateAndroidSurfaceKHR( const VkAndroidSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
+    {
+        return vk_new( pSurface );
+    }
+#endif
+
 #ifdef VK_KHR_surface
     void Instance::vkDestroySurfaceKHR( VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator )
     {
