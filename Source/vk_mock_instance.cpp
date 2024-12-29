@@ -26,17 +26,35 @@
 namespace vkmock
 {
     Instance::Instance( const VkInstanceCreateInfo& createInfo )
-        : m_PhysicalDevice( new VkPhysicalDevice_T( new PhysicalDevice() ) )
+        : m_PhysicalDevice( nullptr )
     {
+        try
+        {
+            m_pMockFunctions = new Functions();
+            m_PhysicalDevice = new VkPhysicalDevice_T( GetApiHandle() );
+        }
+        catch( ... )
+        {
+            Instance::~Instance();
+            throw;
+        }
     }
 
     Instance::~Instance()
     {
         delete m_PhysicalDevice;
+        delete m_pMockFunctions;
     }
 
     void Instance::vkDestroyInstance( const VkAllocationCallbacks* pAllocator )
     {
+        // Call mock function before destroying the instance.
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkDestroyInstance != nullptr ) )
+        {
+            m_pMockFunctions->vkDestroyInstance( GetApiHandle(), pAllocator );
+        }
+
         delete this;
     }
 
@@ -54,19 +72,34 @@ namespace vkmock
         }
 
         *pPhysicalDevices = m_PhysicalDevice;
+
+        // Allow mock function to returned physical devices.
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkEnumeratePhysicalDevices != nullptr ) )
+        {
+            return m_pMockFunctions->vkEnumeratePhysicalDevices( GetApiHandle(), pPhysicalDeviceCount, pPhysicalDevices );
+        }
+
         return VK_SUCCESS;
     }
 
 #ifdef VK_KHR_win32_surface
     VkResult Instance::vkCreateWin32SurfaceKHR( const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
     {
-        return vk_new_nondispatchable<VkSurfaceKHR_T>( pSurface );
+        return vk_new( pSurface );
     }
 #endif
 
 #ifdef VK_KHR_surface
     void Instance::vkDestroySurfaceKHR( VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator )
     {
+        // Call mock function before destroying the surface.
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkDestroySurfaceKHR != nullptr ) )
+        {
+            m_pMockFunctions->vkDestroySurfaceKHR( GetApiHandle(), surface, pAllocator );
+        }
+
         delete surface;
     }
 #endif

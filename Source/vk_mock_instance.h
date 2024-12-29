@@ -30,16 +30,21 @@ namespace vkmock
         Instance( const VkInstanceCreateInfo& createInfo );
         ~Instance();
 
-        void vkDestroyInstance( const VkAllocationCallbacks* pAllocator ) override;
+        void vkDestroyInstance( const VkAllocationCallbacks* pAllocator );
 
-        VkResult vkEnumeratePhysicalDevices( uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices ) override;
+        VkResult vkEnumeratePhysicalDevices( uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices );
 
 #ifdef VK_KHR_win32_surface
-        VkResult vkCreateWin32SurfaceKHR( const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface ) override;
+        VkResult vkCreateWin32SurfaceKHR( const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface );
 #endif
 
 #ifdef VK_KHR_surface
-        void vkDestroySurfaceKHR( VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator ) override;
+        void vkDestroySurfaceKHR( VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator );
 #endif
     };
 }
+
+struct VkInstance_T : vkmock::Instance
+{
+    using Instance::Instance;
+};

@@ -33,6 +33,8 @@ endif ()
 # Mock ICD
 project (vk_mock CXX)
 
+option (BUILD_TSETS "Build Vulkan(R) mock ICD tests" ON)
+
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set (VK_MOCK_ICD_ARCH 64)
 else ()
@@ -97,15 +99,18 @@ endfunction ()
 get_vulkan_api_version ()
 
 # Generate mock ICD
+list (APPEND VK_MOCK_ICD_CODEGEN_FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd_base.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd_dispatch.h")
+
 add_custom_command (
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd_base.h"
+    OUTPUT ${VK_MOCK_ICD_CODEGEN_FILES}
     COMMAND "${Python3_EXECUTABLE}"
         "${VK_MOCK_ICD_SCRIPTS_DIR}/gen_icd.py"
         --vk_xml="${VULKAN_HEADERS_INSTALL_DIR}/registry/vk.xml"
-        --output="${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd_base.h"
+        --output="${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${VULKAN_HEADERS_INSTALL_DIR}/registry/vk.xml"
     DEPENDS "${VK_MOCK_ICD_SCRIPTS_DIR}/gen_icd.py")
-list (APPEND VK_MOCK_ICD_CODEGEN_FILES "${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd_base.h")
 
 # Configure JSON file
 if (WIN32)
@@ -127,15 +132,23 @@ file (GENERATE
 add_custom_target (vk_mock_icd_codegen
     DEPENDS ${VK_MOCK_ICD_CODEGEN_FILES})
 
+set (VK_MOCK_ICD_HEADER_FILES
+    "Include/vk_mock.h")
+
+add_library (vk_mock_icd_headers INTERFACE)
+target_include_directories (vk_mock_icd_headers
+    INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/Include")
+
 add_library (vk_mock_icd SHARED
     "${CMAKE_CURRENT_BINARY_DIR}/vk_mock_icd.rc"
-    "Source/vk_mock_icd.def"
+    ${VK_MOCK_ICD_HEADER_FILES}
     "Source/vk_mock_buffer.h"
     "Source/vk_mock_command_buffer.h"
     "Source/vk_mock_command_buffer.cpp"
     "Source/vk_mock_device.h"
     "Source/vk_mock_device.cpp"
     "Source/vk_mock_device_memory.h"
+    "Source/vk_mock_icd.def"
     "Source/vk_mock_icd.h"
     "Source/vk_mock_icd.cpp"
     "Source/vk_mock_icd_helpers.h"
@@ -154,6 +167,9 @@ add_dependencies (vk_mock_icd vk_mock_icd_codegen)
 
 set_target_properties (vk_mock_icd PROPERTIES
     OUTPUT_NAME "vk_mock_icd${VK_MOCK_ICD_ARCH}")
+
+target_link_libraries (vk_mock_icd
+    PUBLIC vk_mock_icd_headers)
 
 target_include_directories (vk_mock_icd
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
@@ -186,14 +202,29 @@ if (UNIX)
     endif ()
 endif ()
 
+# Build tests
+if (BUILD_TSETS)
+    find_package (Vulkan REQUIRED)
+    add_subdirectory (External/googletest EXCLUDE_FROM_ALL)
+
+    add_executable (vk_mock_icd_tests
+        "Tests/vk_mock_icd_tests.cpp")
+
+    target_link_libraries (vk_mock_icd_tests
+        PRIVATE Vulkan::Vulkan
+        PRIVATE vk_mock_icd_headers
+        PRIVATE gtest_main)
+endif ()
+
 # Install ICD
 include (GNUInstallDirs)
 install (TARGETS vk_mock_icd
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+install (FILES ${VK_MOCK_ICD_HEADER_FILES} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 if (WIN32)
-    install (FILES "${VK_MOCK_JSON}" DESTINATION "${CMAKE_INSTALL_BINDIR}/.")
+    install (FILES "${VK_MOCK_JSON}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
 else ()
-    install (FILES "${VK_MOCK_JSON}" DESTINATION "${CMAKE_INSTALL_LIBDIR}/.")
+    install (FILES "${VK_MOCK_JSON}" DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 endif ()

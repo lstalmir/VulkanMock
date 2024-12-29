@@ -103,6 +103,8 @@ class ICDGenerator:
                 command = VulkanCommand( spec, cmd )
                 if command.vulkansc:
                     continue
+                if command.name == 'vkGetInstanceProcAddr' or command.name == 'vkGetDeviceProcAddr':
+                    continue
                 if command.handle not in cmds.keys():
                     cmds[ command.handle ] = []
                 cmds[ command.handle ].append( command )
@@ -110,126 +112,102 @@ class ICDGenerator:
                 if not isinstance( err, AttributeError ):
                     raise err
 
-        self.commands = { handle: ICDGenerator.group_commands_by_extension( commands )
+        self.commands = { handle: self.group_commands_by_extension( commands )
                           for handle, commands
                           in cmds.items() }
 
-    def write_commands( self, out: io.TextIOBase ):
+    def write_icd_base( self, out: io.TextIOBase ):
         out.write( '#pragma once\n' )
-        out.write( '#define VK_NO_PROTOTYPES\n' )
         out.write( '#include <vulkan/vulkan.h>\n' )
         out.write( '#include <vulkan/vk_icd.h>\n' )
-        out.write( '#include <string.h>\n\n' )
+        out.write( '#include <string.h>\n' )
+        out.write( '#include <memory>\n\n' )
 
-        # Define base type for each ICD object
+        # Define dispatch table for custom mock function pointers
         out.write( 'namespace vkmock\n{\n' )
-        out.write( 'struct VkObjectBase {\n' )
-        out.write( '  uintptr_t m_LoaderMagic = ICD_LOADER_MAGIC;\n' )
+        out.write( 'struct Functions\n{\n' )
+        out.write( '  int SetProcAddr( const char* name, PFN_vkVoidFunction func );\n\n' )
+        for handle, extensions in self.commands.items():
+            if handle is not None:
+                for ext, commands in extensions.items():
+                    self.begin_extension_block( out, ext )
+                    for cmd in commands:
+                        out.write( f'  PFN_{cmd.name} {cmd.name} = nullptr;\n' )
+                    self.end_extension_block( out, ext )
         out.write( '};\n\n' )
 
+        # Define base type for each ICD object
         for handle, extensions in self.commands.items():
             if handle is not None:
                 out.write( f'struct {handle[2:]}Base\n{{\n' )
+                out.write( '  uintptr_t m_LoaderMagic = ICD_LOADER_MAGIC;\n' )
+                out.write( f'  Functions* m_pMockFunctions = nullptr;\n\n' )
+                out.write( f'  {handle} GetApiHandle() {{ return reinterpret_cast<{handle}>(this); }}\n\n' )
                 for ext, commands in extensions.items():
-                    if ext is not None:
-                        out.write( f'#ifdef {ext}\n\n' )
+                    self.begin_extension_block( out, ext )
                     for cmd in commands:
-                        if cmd.name == 'vkGetInstanceProcAddr' or cmd.name == 'vkGetDeviceProcAddr':
-                            continue
-                        out.write( f'  virtual {cmd.result} {cmd.name}(\n    ' )
-                        out.write( ',\n    '.join( [param.string for param in cmd.params[1:] if not param.vulkansc] ) )
-                        out.write( ')' )
-                        if handle is not None:
-                            out.write( '\n  {' )
-                            if cmd.alias is not None:
-                                out.write( f' return {cmd.alias}(' )
-                                out.write( ', '.join( [param.name for param in cmd.params[1:] if not param.vulkansc] ) )
-                                out.write( ');' )
-                            elif cmd.result != 'void':
-                                out.write( ' return {};' )
-                            out.write( ' }\n\n' )
-                        else:
-                            out.write( ';\n\n' )
-                    if ext is not None:
-                        out.write( f'#endif // {ext}\n\n' )
+                        cmd_method_params = [param for param in cmd.params[1:] if not param.vulkansc]
+                        out.write( f'  {cmd.result} {cmd.name}(\n    ' )
+                        out.write( ',\n    '.join( [param.string for param in cmd_method_params] ) )
+                        out.write( ')\n  {\n' )
+                        out.write( f'    if (m_pMockFunctions && m_pMockFunctions->{cmd.name})\n' )
+                        out.write( f'      return m_pMockFunctions->{cmd.name}(GetApiHandle()' )
+                        if cmd_method_params:
+                            out.write( ', ' )
+                            out.write( ', '.join( [param.name for param in cmd_method_params] ) )
+                        out.write( ');\n' )
+                        if cmd.alias is not None:
+                            out.write( f'    return {cmd.alias}(' )
+                            out.write( ', '.join( [param.name for param in cmd_method_params] ) )
+                            out.write( ');\n' )
+                        elif cmd.result != 'void':
+                            out.write( '    return {};\n' )
+                        out.write( '  }\n\n' )
+                    self.end_extension_block( out, ext )
                 out.write( '};\n\n' )
-
         out.write( '}\n\n' )
 
-        # Define structures with virtual functions
-        for handle, extensions in self.commands.items():
-            if handle is not None:
-                out.write( f'struct {handle}_T : vkmock::VkObjectBase {{\n' )
-                out.write( f'  vkmock::{handle[2:]}Base* m_pImpl = nullptr;\n\n' )
-                out.write( f'  {handle}_T( vkmock::{handle[2:]}Base* pImpl ) : m_pImpl( pImpl ) {{}}\n\n' )
-                out.write( f'  {handle}_T( const {handle}_T& ) = delete;\n' )
-                out.write( f'  {handle}_T& operator=( const {handle}_T& ) = delete;\n\n' )
-                out.write( f'  {handle}_T( {handle}_T&& other ) noexcept : m_pImpl( other.m_pImpl ) {{ other.m_pImpl = nullptr; }}\n' )
-                out.write( f'  {handle}_T& operator=( {handle}_T&& other ) noexcept {{ m_pImpl = other.m_pImpl; other.m_pImpl = nullptr; return *this; }}\n\n' )
-                out.write( f'  ~{handle}_T() {{ delete m_pImpl; }}\n\n' )
-
-            for ext, commands in extensions.items():
-                if ext is not None:
-                    out.write( f'#ifdef {ext}\n\n' )
-                for cmd in commands:
-                    if cmd.name == 'vkGetInstanceProcAddr' or cmd.name == 'vkGetDeviceProcAddr':
-                        continue
-                    out.write( f'  {cmd.result} {cmd.name}(\n    ' )
-                    if handle is not None:
-                        out.write( ',\n    '.join( [param.string for param in cmd.params[1:] if not param.vulkansc] ) )
-                    else:
-                        out.write( ',\n    '.join( [param.string for param in cmd.params if not param.vulkansc] ) )
-                    out.write( ')' )
-                    if handle is not None:
-                        out.write( '\n  {\n' )
-                        out.write( f'    return m_pImpl->{cmd.name}(' )
-                        out.write( ', '.join( [param.name for param in cmd.params[1:] if not param.vulkansc] ) )
-                        out.write( ');\n' )
-                        out.write( '  }\n\n' )
-                    else:
-                        out.write( ';\n\n' )
-                if ext is not None:
-                    out.write( f'#endif // {ext}\n\n' )
-            if handle is not None:
-                out.write( '};\n\n' )
+    def write_icd_dispatch( self, out: io.TextIOBase ):
+        out.write( '#pragma once\n' )
 
         # Define entry points to the ICD
         for handle, extensions in self.commands.items():
             if handle is not None:
                 for ext, commands in extensions.items():
-                    if ext is not None:
-                        out.write( f'#ifdef {ext}\n\n' )
+                    self.begin_extension_block( out, ext )
                     for cmd in commands:
-                        if cmd.name == 'vkGetInstanceProcAddr' or cmd.name == 'vkGetDeviceProcAddr':
-                            continue
-                        out.write( f'inline {cmd.result} {cmd.name}(\n  ' )
+                        cmd_method_params = [param for param in cmd.params[1:] if not param.vulkansc]
+                        out.write( f'inline VKAPI_ATTR {cmd.result} VKAPI_CALL {cmd.name}(\n  ' )
                         out.write( ',\n  '.join( [param.string for param in cmd.params if not param.vulkansc] ) )
                         out.write( ')\n{\n' )
                         out.write( f'  return {cmd.params[0].name}->{cmd.name}(' )
-                        out.write( ', '.join( [param.name for param in cmd.params[1:] if not param.vulkansc] ) )
+                        out.write( ', '.join( [param.name for param in cmd_method_params] ) )
                         out.write( ');\n}\n\n' )
-                    if ext is not None:
-                        out.write( f'#endif // {ext}\n\n' )
+                    self.end_extension_block( out, ext )
 
         # vkGetInstanceProcAddr
-        out.write( 'inline PFN_vkVoidFunction vkGetDeviceProcAddr(VkDevice device, const char* name);\n\n' )
-        out.write( 'inline PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char* name)\n{\n' )
+        out.write( 'inline VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* name)\n{\n' )
         for handle, extensions in self.commands.items():
             for ext, commands in extensions.items():
-                if ext is not None:
-                    out.write( f'#ifdef {ext}\n' )
+                self.begin_extension_block( out, ext )
                 for cmd in commands:
-                    out.write( f'  if( !strcmp( "{cmd.name}", name ) ) return reinterpret_cast<PFN_vkVoidFunction>(&{cmd.name});\n' )
-                if ext is not None:
-                    out.write( f'#endif // {ext}\n' )
+                    out.write( f'  if(!strcmp("{cmd.name}", name)) return reinterpret_cast<PFN_vkVoidFunction>(&{cmd.name});\n' )
+                self.end_extension_block( out, ext )
         out.write( '  return nullptr;\n}\n\n' )
 
-        # vkGetDeviceProcAddr
-        out.write( 'inline PFN_vkVoidFunction vkGetDeviceProcAddr(VkDevice device, const char* name)\n{\n' )
-        out.write( '  return vkGetInstanceProcAddr( nullptr, name );\n}\n\n' )
+        # vkmock::Functions::SetProcAddr
+        out.write( 'namespace vkmock\n{\n' )
+        out.write( '  inline int Functions::SetProcAddr(const char* name, PFN_vkVoidFunction func)\n  {\n' )
+        for handle, extensions in self.commands.items():
+            if handle is not None:
+                for ext, commands in extensions.items():
+                    self.begin_extension_block( out, ext )
+                    for cmd in commands:
+                        out.write( f'    if(!strcmp("{cmd.name}", name)) return ({cmd.name} = reinterpret_cast<PFN_{cmd.name}>(func)), 0;\n' )
+                    self.end_extension_block( out, ext )
+        out.write( '    return -1;\n  }\n}\n' )
 
-    @staticmethod
-    def group_commands_by_extension( commands ):
+    def group_commands_by_extension( self, commands ):
         extensions = {}
         for cmd in commands:
             if cmd.extension not in extensions.keys():
@@ -237,15 +215,25 @@ class ICDGenerator:
             extensions[ cmd.extension ].append( cmd )
         return extensions
 
+    def begin_extension_block( self, out: io.TextIOBase, ext: str ):
+        if ext is not None:
+            out.write( f'#ifdef {ext}\n' )
+
+    def end_extension_block( self, out: io.TextIOBase, ext: str ):
+        if ext is not None:
+            out.write( f'#endif // {ext}\n' )
+
 def parse_args():
-    parser = argparse.ArgumentParser(description='Generate test ICD')
-    parser.add_argument('--vk_xml', type=str, help='Vulkan XML API description')
-    parser.add_argument('--output', type=str, help='Output directory')
+    parser = argparse.ArgumentParser( description='Generate test ICD' )
+    parser.add_argument( '--vk_xml', type=str, help='Vulkan XML API description' )
+    parser.add_argument( '--output', type=str, help='Output directory' )
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
     vk_xml = etree.parse( args.vk_xml )
     icd = ICDGenerator( vk_xml )
-    with open( os.path.join( args.output ), 'w' ) as out:
-        icd.write_commands( out )
+    with open( os.path.join( args.output, 'vk_mock_icd_base.h' ), 'w' ) as out:
+        icd.write_icd_base( out )
+    with open( os.path.join( args.output, 'vk_mock_icd_dispatch.h' ), 'w' ) as out:
+        icd.write_icd_dispatch( out )

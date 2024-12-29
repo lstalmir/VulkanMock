@@ -40,7 +40,7 @@ namespace vkmock
             imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
             imageCreateInfo.mipLevels = 1;
             imageCreateInfo.arrayLayers = 1;
-            vk_check( vk_new_nondispatchable<VkImage_T>( &m_Image, imageCreateInfo ) );
+            vk_check( vk_new( &m_Image, imageCreateInfo ) );
         }
 
         ~Swapchain()

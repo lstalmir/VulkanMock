@@ -23,50 +23,54 @@
 
 namespace vkmock
 {
-    struct PhysicalDevice;
-    struct Queue;
-
     struct Device : DeviceBase
     {
-        PhysicalDevice& m_PhysicalDevice;
+        VkPhysicalDevice m_PhysicalDevice;
         VkQueue m_Queue;
 
-        Device( PhysicalDevice& physicalDevice, const VkDeviceCreateInfo& createInfo );
+        Device( VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& createInfo );
         ~Device();
 
-        void vkDestroyDevice( const VkAllocationCallbacks* pAllocator ) override;
+        void vkDestroyDevice( const VkAllocationCallbacks* pAllocator );
 
-        void vkGetDeviceQueue( uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue ) override;
-        void vkGetDeviceQueue2( const VkDeviceQueueInfo2* pQueueInfo, VkQueue* pQueue ) override;
+        void vkGetDeviceQueue( uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue );
+        void vkGetDeviceQueue2( const VkDeviceQueueInfo2* pQueueInfo, VkQueue* pQueue );
 
-        VkResult vkCreateQueryPool( const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool ) override;
-        void vkDestroyQueryPool( VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator ) override;
+        VkResult vkCreateQueryPool( const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool );
+        void vkDestroyQueryPool( VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator );
 
-        VkResult vkAllocateCommandBuffers( const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers ) override;
-        void vkFreeCommandBuffers( VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers ) override;
+        VkResult vkAllocateCommandBuffers( const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers );
+        void vkFreeCommandBuffers( VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers );
 
-        VkResult vkAllocateMemory( const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory ) override;
-        void vkFreeMemory( VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator ) override;
-        VkResult vkMapMemory( VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData ) override;
+        VkResult vkAllocateMemory( const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory );
+        void vkFreeMemory( VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator );
+        VkResult vkMapMemory( VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData );
 
-        VkResult vkCreateBuffer( const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer ) override;
-        void vkDestroyBuffer( VkBuffer buffer, const VkAllocationCallbacks* pAllocator ) override;
-        void vkGetBufferMemoryRequirements( VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements ) override;
-        VkResult vkBindBufferMemory( VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset ) override;
-        void vkGetBufferMemoryRequirements2( const VkBufferMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements ) override;
-        VkResult vkBindBufferMemory2( uint32_t bindInfoCount, const VkBindBufferMemoryInfo* pBindInfos ) override;
+        VkResult vkCreateBuffer( const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer );
+        void vkDestroyBuffer( VkBuffer buffer, const VkAllocationCallbacks* pAllocator );
+        void vkGetBufferMemoryRequirements( VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements );
+        VkResult vkBindBufferMemory( VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset );
 
-        VkResult vkCreateImage( const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage ) override;
-        void vkDestroyImage( VkImage image, const VkAllocationCallbacks* pAllocator ) override;
-        void vkGetImageMemoryRequirements( VkImage image, VkMemoryRequirements* pMemoryRequirements ) override;
-        VkResult vkBindImageMemory( VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset ) override;
-        void vkGetImageMemoryRequirements2( const VkImageMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements ) override;
-        VkResult vkBindImageMemory2( uint32_t bindInfoCount, const VkBindImageMemoryInfo* pBindInfos ) override;
+        VkResult vkCreateImage( const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage );
+        void vkDestroyImage( VkImage image, const VkAllocationCallbacks* pAllocator );
+        void vkGetImageMemoryRequirements( VkImage image, VkMemoryRequirements* pMemoryRequirements );
+        VkResult vkBindImageMemory( VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset );
+
+        void vkGetBufferMemoryRequirements2( const VkBufferMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements );
+        void vkGetImageMemoryRequirements2( const VkImageMemoryRequirementsInfo2* pInfo, VkMemoryRequirements2* pMemoryRequirements );
+
+        VkResult vkBindBufferMemory2( uint32_t bindInfoCount, const VkBindBufferMemoryInfo* pBindInfos );
+        VkResult vkBindImageMemory2( uint32_t bindInfoCount, const VkBindImageMemoryInfo* pBindInfos );
 
 #ifdef VK_KHR_swapchain
-        VkResult vkCreateSwapchainKHR( const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain ) override;
-        void vkDestroySwapchainKHR( VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator ) override;
-        VkResult vkAcquireNextImageKHR( VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex ) override;
+        VkResult vkCreateSwapchainKHR( const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain );
+        void vkDestroySwapchainKHR( VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator );
+        VkResult vkAcquireNextImageKHR( VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex );
 #endif
     };
 }
+
+struct VkDevice_T : vkmock::Device
+{
+    using Device::Device;
+};

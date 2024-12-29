@@ -31,40 +31,69 @@
 
 namespace vkmock
 {
-    Device::Device( PhysicalDevice& physicalDevice, const VkDeviceCreateInfo& createInfo )
+    Device::Device( VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& createInfo )
         : m_PhysicalDevice( physicalDevice )
         , m_Queue( nullptr )
     {
-        if( createInfo.queueCreateInfoCount > 0 )
+        try
         {
-            vk_check( vk_new<Queue>(
-                &m_Queue, *this, createInfo.pQueueCreateInfos[ 0 ] ) );
+            m_pMockFunctions = new Functions();
+
+            if( createInfo.queueCreateInfoCount > 0 )
+            {
+                vk_check( vk_new(
+                    &m_Queue, GetApiHandle(), createInfo.pQueueCreateInfos[ 0 ] ) );
+            }
+        }
+        catch( ... )
+        {
+            Device::~Device();
+            throw;
         }
     }
 
     Device::~Device()
     {
         delete m_Queue;
+        delete m_pMockFunctions;
     }
 
     void Device::vkDestroyDevice( const VkAllocationCallbacks* pAllocator )
     {
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkDestroyDevice != nullptr ) )
+        {
+            m_pMockFunctions->vkDestroyDevice( GetApiHandle(), pAllocator );
+        }
+
         delete this;
     }
 
     void Device::vkGetDeviceQueue( uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue )
     {
         *pQueue = m_Queue;
+
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkGetDeviceQueue != nullptr ) )
+        {
+            m_pMockFunctions->vkGetDeviceQueue( GetApiHandle(), queueFamilyIndex, queueIndex, pQueue );
+        }
     }
 
     void Device::vkGetDeviceQueue2( const VkDeviceQueueInfo2* pQueueInfo, VkQueue* pQueue )
     {
         *pQueue = m_Queue;
+
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkGetDeviceQueue2 != nullptr ) )
+        {
+            m_pMockFunctions->vkGetDeviceQueue2( GetApiHandle(), pQueueInfo, pQueue );
+        }
     }
 
     VkResult Device::vkCreateQueryPool( const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool )
     {
-        return vk_new_nondispatchable<VkQueryPool_T>( pQueryPool, *pCreateInfo );
+        return vk_new<VkQueryPool_T>( pQueryPool, *pCreateInfo );
     }
 
     void Device::vkDestroyQueryPool( VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator )
@@ -78,7 +107,7 @@ namespace vkmock
 
         for( uint32_t i = 0; i < pAllocateInfo->commandBufferCount; ++i )
         {
-            result = vk_new<CommandBuffer>( &pCommandBuffers[ i ] );
+            result = vk_new( &pCommandBuffers[ i ] );
 
             if( result != VK_SUCCESS )
             {
@@ -100,7 +129,7 @@ namespace vkmock
 
     VkResult Device::vkAllocateMemory( const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory )
     {
-        return vk_new_nondispatchable<VkDeviceMemory_T>( pMemory, pAllocateInfo->allocationSize );
+        return vk_new( pMemory, pAllocateInfo->allocationSize );
     }
 
     void Device::vkFreeMemory( VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator )
@@ -110,13 +139,19 @@ namespace vkmock
 
     VkResult Device::vkMapMemory( VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData )
     {
+        if( ( m_pMockFunctions != nullptr ) &&
+            ( m_pMockFunctions->vkMapMemory != nullptr ) )
+        {
+            return m_pMockFunctions->vkMapMemory( GetApiHandle(), memory, offset, size, flags, ppData );
+        }
+
         *ppData = memory->m_pAllocation + offset;
         return VK_SUCCESS;
     }
 
     VkResult Device::vkCreateBuffer( const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer )
     {
-        return vk_new_nondispatchable<VkBuffer_T>( pBuffer, *pCreateInfo );
+        return vk_new( pBuffer, *pCreateInfo );
     }
 
     void Device::vkDestroyBuffer( VkBuffer buffer, const VkAllocationCallbacks* pAllocator )
@@ -154,7 +189,7 @@ namespace vkmock
 
     VkResult Device::vkCreateImage( const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage )
     {
-        return vk_new_nondispatchable<VkImage_T>( pImage, *pCreateInfo );
+        return vk_new( pImage, *pCreateInfo );
     }
 
     void Device::vkDestroyImage( VkImage image, const VkAllocationCallbacks* pAllocator )
@@ -193,7 +228,7 @@ namespace vkmock
 #ifdef VK_KHR_swapchain
     VkResult Device::vkCreateSwapchainKHR( const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain )
     {
-        return vk_new_nondispatchable<VkSwapchainKHR_T>( pSwapchain, *pCreateInfo );
+        return vk_new( pSwapchain, *pCreateInfo );
     }
 
     void Device::vkDestroySwapchainKHR( VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator )

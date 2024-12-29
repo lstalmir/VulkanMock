@@ -25,29 +25,34 @@ namespace vkmock
 {
     struct PhysicalDevice : PhysicalDeviceBase
     {
-        PhysicalDevice();
+        PhysicalDevice( VkInstance instance );
         ~PhysicalDevice();
 
-        VkResult vkEnumerateDeviceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties ) override;
+        VkResult vkEnumerateDeviceExtensionProperties( const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties );
 
-        void vkGetPhysicalDeviceProperties( VkPhysicalDeviceProperties* pProperties ) override;
-        void vkGetPhysicalDeviceProperties2( VkPhysicalDeviceProperties2* pProperties ) override;
-        void vkGetPhysicalDeviceFeatures( VkPhysicalDeviceFeatures* pFeatures ) override;
-        void vkGetPhysicalDeviceFeatures2( VkPhysicalDeviceFeatures2* pFeatures ) override;
-        void vkGetPhysicalDeviceMemoryProperties( VkPhysicalDeviceMemoryProperties* pMemoryProperties ) override;
-        void vkGetPhysicalDeviceQueueFamilyProperties( uint32_t* pQueueFamilyPropertyCount, VkQueueFamilyProperties* pQueueFamilyProperties ) override;
+        void vkGetPhysicalDeviceProperties( VkPhysicalDeviceProperties* pProperties );
+        void vkGetPhysicalDeviceProperties2( VkPhysicalDeviceProperties2* pProperties );
+        void vkGetPhysicalDeviceFeatures( VkPhysicalDeviceFeatures* pFeatures );
+        void vkGetPhysicalDeviceFeatures2( VkPhysicalDeviceFeatures2* pFeatures );
+        void vkGetPhysicalDeviceMemoryProperties( VkPhysicalDeviceMemoryProperties* pMemoryProperties );
+        void vkGetPhysicalDeviceQueueFamilyProperties( uint32_t* pQueueFamilyPropertyCount, VkQueueFamilyProperties* pQueueFamilyProperties );
 
 #ifdef VK_KHR_win32_surface
-        VkBool32 vkGetPhysicalDeviceWin32PresentationSupportKHR( uint32_t queueFamilyIndex ) override;
+        VkBool32 vkGetPhysicalDeviceWin32PresentationSupportKHR( uint32_t queueFamilyIndex );
 #endif
 
 #ifdef VK_KHR_surface
-        VkResult vkGetPhysicalDeviceSurfaceCapabilitiesKHR( VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR* pSurfaceCapabilities ) override;
-        VkResult vkGetPhysicalDeviceSurfaceFormatsKHR( VkSurfaceKHR surface, uint32_t* pSurfaceFormatCount, VkSurfaceFormatKHR* pSurfaceFormats ) override;
-        VkResult vkGetPhysicalDeviceSurfacePresentModesKHR( VkSurfaceKHR surface, uint32_t* pPresentModeCount, VkPresentModeKHR* pPresentModes ) override;
-        VkResult vkGetPhysicalDeviceSurfaceSupportKHR( uint32_t queueFamilyIndex, VkSurfaceKHR surface, VkBool32* pSupported ) override;
+        VkResult vkGetPhysicalDeviceSurfaceCapabilitiesKHR( VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR* pSurfaceCapabilities );
+        VkResult vkGetPhysicalDeviceSurfaceFormatsKHR( VkSurfaceKHR surface, uint32_t* pSurfaceFormatCount, VkSurfaceFormatKHR* pSurfaceFormats );
+        VkResult vkGetPhysicalDeviceSurfacePresentModesKHR( VkSurfaceKHR surface, uint32_t* pPresentModeCount, VkPresentModeKHR* pPresentModes );
+        VkResult vkGetPhysicalDeviceSurfaceSupportKHR( uint32_t queueFamilyIndex, VkSurfaceKHR surface, VkBool32* pSupported );
 #endif
 
-        VkResult vkCreateDevice( const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice ) override;
+        VkResult vkCreateDevice( const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice );
     };
 }
+
+struct VkPhysicalDevice_T : vkmock::PhysicalDevice
+{
+    using PhysicalDevice::PhysicalDevice;
+};

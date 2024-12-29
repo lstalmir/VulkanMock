@@ -19,13 +19,15 @@
 // SOFTWARE.
 
 #include "vk_mock_physical_device.h"
+#include "vk_mock_instance.h"
 #include "vk_mock_device.h"
 #include "vk_mock_icd_helpers.h"
 
 namespace vkmock
 {
-    PhysicalDevice::PhysicalDevice()
+    PhysicalDevice::PhysicalDevice( VkInstance instance )
     {
+        m_pMockFunctions = instance->m_pMockFunctions;
     }
 
     PhysicalDevice::~PhysicalDevice()
@@ -235,6 +237,6 @@ namespace vkmock
 
     VkResult PhysicalDevice::vkCreateDevice( const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice )
     {
-        return vk_new<Device>( pDevice, *this, *pCreateInfo );
+        return vk_new( pDevice, GetApiHandle(), *pCreateInfo );
     }
 }

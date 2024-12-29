@@ -21,12 +21,29 @@
 #include "vk_mock_icd.h"
 #include "vk_mock_icd_helpers.h"
 #include "vk_mock_instance.h"
+#include "vk_mock_device.h"
+#include "vk_mock_physical_device.h"
+#include "vk_mock_command_buffer.h"
+#include "vk_mock_queue.h"
+#undef VK_NO_PROTOTYPES
+#include "vk_mock.h"
+
+#include "vk_mock_icd_dispatch.h"
 
 PFN_vkVoidFunction vk_icdGetInstanceProcAddr(
-    VkInstance instance,
+    VkInstance,
     const char* pName )
 {
-    return vkGetInstanceProcAddr( instance, pName );
+    if( !strcmp( "vkGetInstanceProcAddr", pName ) ) return reinterpret_cast<PFN_vkVoidFunction>( vk_icdGetInstanceProcAddr );
+    if( !strcmp( "vkGetDeviceProcAddr", pName ) ) return reinterpret_cast<PFN_vkVoidFunction>( vk_icdGetInstanceProcAddr );
+
+#ifdef VK_EXT_mock
+    if( !strcmp( "vkSetDeviceMockProcAddrEXT", pName ) ) return reinterpret_cast<PFN_vkVoidFunction>( vkSetDeviceMockProcAddrEXT );
+    if( !strcmp( "vkAppendMockCommandEXT", pName ) ) return reinterpret_cast<PFN_vkVoidFunction>( vkAppendMockCommandEXT );
+    if( !strcmp( "vkExecuteMockCommandBufferEXT", pName ) ) return reinterpret_cast<PFN_vkVoidFunction>( vkExecuteMockCommandBufferEXT );
+#endif // VK_EXT_mock
+
+    return vkGetInstanceProcAddr( nullptr, pName );
 }
 
 VkResult vk_icdNegotiateLoaderICDInterfaceVersion(
@@ -52,7 +69,7 @@ VkResult vkCreateInstance(
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance )
 {
-    return vk_new<vkmock::Instance>( pInstance, *pCreateInfo );
+    return vk_new( pInstance, *pCreateInfo );
 }
 
 VkResult vkEnumerateInstanceVersion(
@@ -109,4 +126,40 @@ VkResult vkEnumerateInstanceExtensionProperties(
     }
 
     return VK_SUCCESS;
+}
+
+void vkSetInstanceMockProcAddrEXT(
+    VkInstance instance,
+    const char* pName,
+    PFN_vkVoidFunction pFunction )
+{
+    if( instance->m_pMockFunctions )
+    {
+        instance->m_pMockFunctions->SetProcAddr( pName, pFunction );
+    }
+}
+
+void vkSetDeviceMockProcAddrEXT(
+    VkDevice device,
+    const char* pName,
+    PFN_vkVoidFunction pFunction )
+{
+    if( device->m_pMockFunctions )
+    {
+        device->m_pMockFunctions->SetProcAddr( pName, pFunction );
+    }
+}
+
+void vkAppendMockCommandEXT(
+    VkCommandBuffer commandBuffer,
+    const VkMockCommandEXT* pCommand )
+{
+    commandBuffer->m_Commands.push_back( *pCommand );
+}
+
+void vkExecuteMockCommandBufferEXT(
+    VkQueue queue,
+    VkCommandBuffer commandBuffer )
+{
+    queue->ExecuteCommandBuffer( commandBuffer );
 }

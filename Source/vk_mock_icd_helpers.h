@@ -23,36 +23,10 @@
 #include <vulkan/vk_icd.h>
 #include <memory>
 
-template<typename T, typename U, typename... Args>
-inline VkResult vk_new( U** ptr, Args&&... args ) noexcept
+template<typename T, typename... Args>
+inline VkResult vk_new( T** ptr, Args&&... args ) noexcept
 {
     ( *ptr ) = nullptr;
-    try
-    {
-        ( *ptr ) = new U( nullptr );
-        ( *ptr )->m_pImpl = new T( std::forward<Args>( args )... );
-        return VK_SUCCESS;
-    }
-    catch( const std::bad_alloc& )
-    {
-        delete *ptr;
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    catch( VkResult result )
-    {
-        delete *ptr;
-        return result;
-    }
-    catch( ... )
-    {
-        delete *ptr;
-        return VK_ERROR_UNKNOWN;
-    }
-}
-
-template<typename T, typename U, typename... Args>
-inline VkResult vk_new_nondispatchable( U* ptr, Args&&... args ) noexcept
-{
     try
     {
         ( *ptr ) = new T( std::forward<Args>( args )... );
