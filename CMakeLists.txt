@@ -145,6 +145,7 @@ add_library (vk_mock_icd SHARED
     "Source/vk_mock_buffer.h"
     "Source/vk_mock_command_buffer.h"
     "Source/vk_mock_command_buffer.cpp"
+    "Source/vk_mock_command_pool.h"
     "Source/vk_mock_device.h"
     "Source/vk_mock_device.cpp"
     "Source/vk_mock_device_memory.h"

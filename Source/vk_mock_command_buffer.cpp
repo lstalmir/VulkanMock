@@ -19,6 +19,8 @@
 // SOFTWARE.
 
 #include "vk_mock_command_buffer.h"
+#include "vk_mock_command_pool.h"
+#include "vk_mock_device.h"
 #include "vk_mock_queue.h"
 #include "vk_mock_query_pool.h"
 #include "vk_mock_buffer.h"
@@ -29,14 +31,27 @@
 
 namespace vkmock
 {
-    CommandBuffer::CommandBuffer()
-        : m_Commands( 0 )
+    CommandBuffer::CommandBuffer( VkDevice device, VkCommandPool commandPool )
+        : m_CommandPool( commandPool )
+        , m_Commands( 0 )
     {
+        m_pMockFunctions = device->m_pMockFunctions;
+        m_CommandPool->m_CommandBuffers.push_back( GetApiHandle() );
     }
 
     CommandBuffer::~CommandBuffer()
     {
         Reset();
+
+        auto iter = std::remove(
+            m_CommandPool->m_CommandBuffers.begin(),
+            m_CommandPool->m_CommandBuffers.end(),
+            GetApiHandle() );
+
+        if( iter != m_CommandPool->m_CommandBuffers.end() )
+        {
+            m_CommandPool->m_CommandBuffers.erase( iter );
+        }
     }
 
     void CommandBuffer::Reset()
@@ -54,16 +69,27 @@ namespace vkmock
 
     VkResult CommandBuffer::vkBeginCommandBuffer( const VkCommandBufferBeginInfo* pBeginInfo )
     {
-        return vkResetCommandBuffer( 0 );
+        Reset();
+
+        if( m_pMockFunctions->vkBeginCommandBuffer )
+        {
+            return m_pMockFunctions->vkBeginCommandBuffer(
+                GetApiHandle(),
+                pBeginInfo );
+        }
+
+        return VK_SUCCESS;
     }
 
     VkResult CommandBuffer::vkResetCommandBuffer( VkCommandBufferResetFlags flags )
     {
         Reset();
 
-        if( m_pMockFunctions && m_pMockFunctions->vkResetCommandBuffer )
+        if( m_pMockFunctions->vkResetCommandBuffer )
         {
-            return m_pMockFunctions->vkResetCommandBuffer( GetApiHandle(), flags );
+            return m_pMockFunctions->vkResetCommandBuffer(
+                GetApiHandle(),
+                flags );
         }
 
         return VK_SUCCESS;
@@ -71,6 +97,16 @@ namespace vkmock
 
     void CommandBuffer::vkCmdDraw( uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance )
     {
+        if( m_pMockFunctions->vkCmdDraw )
+        {
+            return m_pMockFunctions->vkCmdDraw(
+                GetApiHandle(),
+                vertexCount,
+                instanceCount,
+                firstVertex,
+                firstInstance );
+        }
+
         VkMockCommandEXT command = {};
         command.data.u32[ 0 ] = vertexCount * instanceCount;
         command.pfnExecute = []( VkQueue, VkMockCommandEXT* cmd ) {
@@ -83,6 +119,13 @@ namespace vkmock
 
     void CommandBuffer::vkCmdDispatch( uint32_t x, uint32_t y, uint32_t z )
     {
+        if( m_pMockFunctions->vkCmdDispatch )
+        {
+            return m_pMockFunctions->vkCmdDispatch(
+                GetApiHandle(),
+                x, y, z );
+        }
+
         VkMockCommandEXT command = {};
         command.data.u32[ 0 ] = x * y * z;
         command.pfnExecute = []( VkQueue, VkMockCommandEXT* cmd ) {
@@ -95,6 +138,14 @@ namespace vkmock
 
     void CommandBuffer::vkCmdExecuteCommands( uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers )
     {
+        if( m_pMockFunctions->vkCmdExecuteCommands )
+        {
+            return m_pMockFunctions->vkCmdExecuteCommands(
+                GetApiHandle(),
+                commandBufferCount,
+                pCommandBuffers );
+        }
+
         for( uint32_t i = 0; i < commandBufferCount; ++i )
         {
             VkMockCommandEXT command = {};
@@ -117,6 +168,15 @@ namespace vkmock
 
         static_assert( sizeof( CommandData ) <= sizeof( VkMockCommandEXT::data ),
             "Command data size exceeds VkMockCommandEXT::data size" );
+
+        if( m_pMockFunctions->vkCmdWriteTimestamp )
+        {
+            return m_pMockFunctions->vkCmdWriteTimestamp(
+                GetApiHandle(),
+                pipelineStage,
+                queryPool,
+                query );
+        }
 
         VkMockCommandEXT command = {};
         CommandData& cmdData = *reinterpret_cast<CommandData*>( command.data.u64 );
@@ -146,6 +206,16 @@ namespace vkmock
 
         static_assert( sizeof( CommandData ) <= sizeof( VkMockCommandEXT::data ),
             "Command data size exceeds VkMockCommandEXT::data size" );
+
+        if( m_pMockFunctions->vkCmdCopyBuffer )
+        {
+            return m_pMockFunctions->vkCmdCopyBuffer(
+                GetApiHandle(),
+                srcBuffer,
+                dstBuffer,
+                regionCount,
+                pRegions );
+        }
 
         for( uint32_t i = 0; i < regionCount; ++i )
         {
@@ -181,6 +251,19 @@ namespace vkmock
 
         static_assert( sizeof( CommandData ) <= sizeof( VkMockCommandEXT::data ),
             "Command data size exceeds VkMockCommandEXT::data size" );
+
+        if( m_pMockFunctions->vkCmdCopyQueryPoolResults )
+        {
+            return m_pMockFunctions->vkCmdCopyQueryPoolResults(
+                GetApiHandle(),
+                queryPool,
+                firstQuery,
+                queryCount,
+                dstBuffer,
+                dstOffset,
+                stride,
+                flags );
+        }
 
         VkMockCommandEXT command = {};
         CommandData& cmdData = *reinterpret_cast<CommandData*>( command.data.u64 );

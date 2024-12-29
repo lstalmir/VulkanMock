@@ -27,9 +27,10 @@ namespace vkmock
 {
     struct CommandBuffer : CommandBufferBase
     {
+        VkCommandPool m_CommandPool;
         std::vector<VkMockCommandEXT> m_Commands;
 
-        CommandBuffer();
+        CommandBuffer( VkDevice device, VkCommandPool commandPool );
         ~CommandBuffer();
 
         void Reset();

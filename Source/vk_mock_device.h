@@ -39,6 +39,10 @@ namespace vkmock
         VkResult vkCreateQueryPool( const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool );
         void vkDestroyQueryPool( VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator );
 
+        VkResult vkCreateCommandPool( const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool );
+        void vkDestroyCommandPool( VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator );
+        VkResult vkResetCommandPool( VkCommandPool commandPool, VkCommandPoolResetFlags flags );
+
         VkResult vkAllocateCommandBuffers( const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers );
         void vkFreeCommandBuffers( VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers );
 
