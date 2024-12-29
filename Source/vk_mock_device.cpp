@@ -468,6 +468,32 @@ namespace vkmock
         delete swapchain;
     }
 
+    VkResult Device::vkGetSwapchainImagesKHR( VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages )
+    {
+        if( m_pMockFunctions->vkGetSwapchainImagesKHR )
+        {
+            return m_pMockFunctions->vkGetSwapchainImagesKHR(
+                GetApiHandle(),
+                swapchain,
+                pSwapchainImageCount,
+                pSwapchainImages );
+        }
+
+        if( !pSwapchainImages )
+        {
+            *pSwapchainImageCount = 1;
+            return VK_SUCCESS;
+        }
+
+        if( *pSwapchainImageCount < 1 )
+        {
+            return VK_INCOMPLETE;
+        }
+
+        pSwapchainImages[ 0 ] = swapchain->m_Image;
+        return VK_SUCCESS;
+    }
+
     VkResult Device::vkAcquireNextImageKHR( VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex )
     {
         if( m_pMockFunctions->vkAcquireNextImageKHR )
@@ -478,6 +504,20 @@ namespace vkmock
                 timeout,
                 semaphore,
                 fence,
+                pImageIndex );
+        }
+
+        *pImageIndex = 0;
+        return VK_SUCCESS;
+    }
+
+    VkResult Device::vkAcquireNextImage2KHR( const VkAcquireNextImageInfoKHR* pAcquireInfo, uint32_t* pImageIndex )
+    {
+        if( m_pMockFunctions->vkAcquireNextImage2KHR )
+        {
+            return m_pMockFunctions->vkAcquireNextImage2KHR(
+                GetApiHandle(),
+                pAcquireInfo,
                 pImageIndex );
         }
 

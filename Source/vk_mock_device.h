@@ -69,7 +69,9 @@ namespace vkmock
 #ifdef VK_KHR_swapchain
         VkResult vkCreateSwapchainKHR( const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain );
         void vkDestroySwapchainKHR( VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator );
+        VkResult vkGetSwapchainImagesKHR( VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages );
         VkResult vkAcquireNextImageKHR( VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex );
+        VkResult vkAcquireNextImage2KHR( const VkAcquireNextImageInfoKHR* pAcquireInfo, uint32_t* pImageIndex );
 #endif
     };
 }
