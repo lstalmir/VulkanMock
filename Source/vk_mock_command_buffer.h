@@ -21,6 +21,7 @@
 #pragma once
 #include "vk_mock.h"
 #include "vk_mock_icd_base.h"
+#include "vk_mock_icd_helpers.h"
 #include <vector>
 
 namespace vkmock
@@ -28,7 +29,7 @@ namespace vkmock
     struct CommandBuffer : CommandBufferBase
     {
         VkCommandPool m_CommandPool;
-        std::vector<VkMockCommandEXT> m_Commands;
+        std::vector<VkMockCommandEXT, vk_stl_allocator<VkMockCommandEXT>> m_Commands;
 
         CommandBuffer( VkDevice device, VkCommandPool commandPool );
         ~CommandBuffer();

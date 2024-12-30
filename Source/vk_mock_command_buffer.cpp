@@ -33,7 +33,7 @@ namespace vkmock
 {
     CommandBuffer::CommandBuffer( VkDevice device, VkCommandPool commandPool )
         : m_CommandPool( commandPool )
-        , m_Commands( 0 )
+        , m_Commands( 0, commandPool->m_Allocator )
     {
         m_pMockFunctions = device->m_pMockFunctions;
         m_CommandPool->m_CommandBuffers.push_back( GetApiHandle() );

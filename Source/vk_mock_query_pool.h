@@ -20,16 +20,17 @@
 
 #pragma once
 #include "vk_mock_icd_base.h"
+#include "vk_mock_icd_helpers.h"
 #include <vector>
 
 namespace vkmock
 {
     struct QueryPool
     {
-        std::vector<uint64_t> m_Timestamps;
+        std::vector<uint64_t, vk_stl_allocator<uint64_t>> m_Timestamps;
 
         explicit QueryPool( const VkQueryPoolCreateInfo& createInfo )
-            : m_Timestamps( 0 )
+            : m_Timestamps( 0, g_CurrentAllocator )
         {
             switch( createInfo.queryType )
             {

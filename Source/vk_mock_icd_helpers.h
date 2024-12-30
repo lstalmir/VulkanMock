@@ -118,4 +118,36 @@ namespace vkmock
             throw result;
         }
     }
+
+    template<typename T>
+    struct vk_stl_allocator
+    {
+        using value_type = T;
+
+        VkAllocationCallbacks m_Allocator = g_DefaultAllocator;
+
+        vk_stl_allocator() = default;
+        vk_stl_allocator( const VkAllocationCallbacks& allocator )
+            : m_Allocator( allocator )
+        {}
+
+        template<typename U>
+        vk_stl_allocator( const vk_stl_allocator<U>& other )
+            : m_Allocator( other.m_Allocator )
+        {}
+
+        T* allocate( size_t n )
+        {
+            return static_cast<T*>( m_Allocator.pfnAllocation(
+                m_Allocator.pUserData,
+                n * sizeof( T ),
+                alignof( T ),
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT ) );
+        }
+
+        void deallocate( T* p, size_t )
+        {
+            m_Allocator.pfnFree( m_Allocator.pUserData, p );
+        }
+    };
 }

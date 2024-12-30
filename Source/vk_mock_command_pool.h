@@ -27,17 +27,20 @@ namespace vkmock
 {
     struct CommandPool
     {
+        typedef std::vector<VkCommandBuffer, vk_stl_allocator<VkCommandBuffer>>
+            CommandBufferVector;
+
         VkAllocationCallbacks m_Allocator;
-        std::vector<VkCommandBuffer> m_CommandBuffers;
+        CommandBufferVector m_CommandBuffers;
 
         CommandPool()
             : m_Allocator( g_CurrentAllocator )
-            , m_CommandBuffers( 0 )
+            , m_CommandBuffers( 0, m_Allocator )
         {}
 
         ~CommandPool()
         {
-            std::vector<VkCommandBuffer> commandBuffers = std::move( m_CommandBuffers );
+            CommandBufferVector commandBuffers = std::move( m_CommandBuffers );
             for( VkCommandBuffer commandBuffer : commandBuffers )
             {
                 vk_delete( commandBuffer, g_CurrentAllocator );
