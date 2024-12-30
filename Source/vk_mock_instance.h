@@ -25,6 +25,7 @@ namespace vkmock
 {
     struct Instance : InstanceBase
     {
+        VkAllocationCallbacks m_Allocator;
         VkPhysicalDevice m_PhysicalDevice;
 
         Instance( const VkInstanceCreateInfo& createInfo );

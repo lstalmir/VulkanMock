@@ -23,33 +23,99 @@
 #include <vulkan/vk_icd.h>
 #include <memory>
 
-template<typename T, typename... Args>
-inline VkResult vk_new( T** ptr, Args&&... args ) noexcept
+namespace vkmock
 {
-    ( *ptr ) = nullptr;
-    try
+    extern const VkAllocationCallbacks g_DefaultAllocator;
+    extern thread_local VkAllocationCallbacks g_CurrentAllocator;
+
+    inline const VkAllocationCallbacks& vk_allocator(
+        const VkAllocationCallbacks* pAllocator,
+        const VkAllocationCallbacks& fallbackAllocator )
     {
-        ( *ptr ) = new T( std::forward<Args>( args )... );
-        return VK_SUCCESS;
+        return pAllocator ? *pAllocator : fallbackAllocator;
     }
-    catch( const std::bad_alloc& )
+
+    template<typename T, typename... Args>
+    inline VkResult vk_new( T** ptr, const VkAllocationCallbacks& allocator, VkSystemAllocationScope scope, Args&&... args ) noexcept
     {
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-    catch( VkResult result )
-    {
+        VkResult result = VK_SUCCESS;
+        VkAllocationCallbacks previousAllocator =
+            std::exchange( g_CurrentAllocator, allocator );
+
+        ( *ptr ) = nullptr;
+        try
+        {
+            // Allocate memory for the new object.
+            ( *ptr ) = static_cast<T*>( allocator.pfnAllocation(
+                allocator.pUserData,
+                sizeof( T ),
+                alignof( T ),
+                scope ) );
+
+            if( !( *ptr ) )
+            {
+                result = VK_ERROR_OUT_OF_HOST_MEMORY;
+            }
+            else
+            {
+                // Invoke constructor.
+                new( *ptr ) T( std::forward<Args>( args )... );
+            }
+        }
+        catch( const std::bad_alloc& )
+        {
+            result = VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
+        catch( VkResult result_ )
+        {
+            result = result_;
+        }
+        catch( ... )
+        {
+            result = VK_ERROR_UNKNOWN;
+        }
+
+        if( result != VK_SUCCESS && ( *ptr ) )
+        {
+            // Free memory.
+            allocator.pfnFree( allocator.pUserData, *ptr );
+            ( *ptr ) = nullptr;
+        }
+
+        g_CurrentAllocator = previousAllocator;
+
         return result;
     }
-    catch( ... )
-    {
-        return VK_ERROR_UNKNOWN;
-    }
-}
 
-inline void vk_check( VkResult result )
-{
-    if( result != VK_SUCCESS )
+    template<typename T>
+    inline void vk_delete( T* ptr, const VkAllocationCallbacks& allocator ) noexcept
     {
-        throw result;
+        if( ptr )
+        {
+            VkAllocationCallbacks previousAllocator =
+                std::exchange( g_CurrentAllocator, allocator );
+
+            try
+            {
+                // Invoke destructor.
+                ptr->~T();
+
+                // Free memory.
+                allocator.pfnFree( allocator.pUserData, ptr );
+            }
+            catch( ... )
+            {
+            }
+
+            g_CurrentAllocator = previousAllocator;
+        }
+    }
+
+    inline void vk_check( VkResult result )
+    {
+        if( result != VK_SUCCESS )
+        {
+            throw result;
+        }
     }
 }

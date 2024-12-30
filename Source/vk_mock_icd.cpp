@@ -69,7 +69,11 @@ VkResult vkCreateInstance(
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance )
 {
-    return vk_new( pInstance, *pCreateInfo );
+    return vkmock::vk_new(
+        pInstance,
+        vkmock::vk_allocator( pAllocator, vkmock::g_DefaultAllocator ),
+        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE,
+        *pCreateInfo );
 }
 
 VkResult vkEnumerateInstanceVersion(

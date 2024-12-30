@@ -33,17 +33,25 @@
 namespace vkmock
 {
     Device::Device( VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& createInfo )
-        : m_PhysicalDevice( physicalDevice )
+        : m_Allocator( g_CurrentAllocator )
+        , m_PhysicalDevice( physicalDevice )
         , m_Queue( nullptr )
     {
         try
         {
-            m_pMockFunctions = new Functions();
+            vk_check( vk_new(
+                &m_pMockFunctions,
+                m_Allocator,
+                VK_SYSTEM_ALLOCATION_SCOPE_DEVICE ) );
 
             if( createInfo.queueCreateInfoCount > 0 )
             {
                 vk_check( vk_new(
-                    &m_Queue, GetApiHandle(), createInfo.pQueueCreateInfos[ 0 ] ) );
+                    &m_Queue,
+                    m_Allocator,
+                    VK_SYSTEM_ALLOCATION_SCOPE_DEVICE,
+                    GetApiHandle(),
+                    createInfo.pQueueCreateInfos[ 0 ] ) );
             }
         }
         catch( ... )
@@ -55,8 +63,8 @@ namespace vkmock
 
     Device::~Device()
     {
-        delete m_Queue;
-        delete m_pMockFunctions;
+        vk_delete( m_Queue, g_CurrentAllocator );
+        vk_delete( m_pMockFunctions, g_CurrentAllocator );
     }
 
     void Device::vkDestroyDevice( const VkAllocationCallbacks* pAllocator )
@@ -68,7 +76,8 @@ namespace vkmock
                 pAllocator );
         }
 
-        delete this;
+        vk_delete( this,
+            vk_allocator( pAllocator, m_Allocator ) );
     }
 
     void Device::vkGetDeviceQueue( uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue )
@@ -109,7 +118,11 @@ namespace vkmock
                 pQueryPool );
         }
 
-        return vk_new( pQueryPool, *pCreateInfo );
+        return vk_new(
+            pQueryPool,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+            *pCreateInfo );
     }
 
     void Device::vkDestroyQueryPool( VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator )
@@ -122,7 +135,8 @@ namespace vkmock
                 pAllocator );
         }
 
-        delete queryPool;
+        vk_delete( queryPool,
+            vk_allocator( pAllocator, m_Allocator ) );
     }
 
     VkResult Device::vkCreateCommandPool( const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool )
@@ -136,7 +150,10 @@ namespace vkmock
                 pCommandPool );
         }
 
-        return vk_new( pCommandPool );
+        return vk_new(
+            pCommandPool,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT );
     }
 
     void Device::vkDestroyCommandPool( VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator )
@@ -149,7 +166,8 @@ namespace vkmock
                 pAllocator );
         }
 
-        delete commandPool;
+        vk_delete( commandPool,
+            vk_allocator( pAllocator, commandPool->m_Allocator ) );
     }
 
     VkResult Device::vkResetCommandPool( VkCommandPool commandPool, VkCommandPoolResetFlags flags )
@@ -183,11 +201,20 @@ namespace vkmock
         for( uint32_t i = 0; i < pAllocateInfo->commandBufferCount; ++i )
         {
             VkResult result = vk_new(
-                &pCommandBuffers[ i ], GetApiHandle(), pAllocateInfo->commandPool );
+                &pCommandBuffers[ i ],
+                pAllocateInfo->commandPool->m_Allocator,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+                GetApiHandle(),
+                pAllocateInfo->commandPool );
 
             if( result != VK_SUCCESS )
             {
-                vkFreeCommandBuffers( pAllocateInfo->commandPool, i, pCommandBuffers );
+                for( uint32_t j = 0; j < i; ++j )
+                {
+                    vk_delete( pCommandBuffers[ j ],
+                        pAllocateInfo->commandPool->m_Allocator );
+                }
+
                 return result;
             }
         }
@@ -208,7 +235,7 @@ namespace vkmock
 
         for( uint32_t i = 0; i < commandBufferCount; ++i )
         {
-            delete pCommandBuffers[ i ];
+            vk_delete( pCommandBuffers[ i ], commandPool->m_Allocator );
         }
     }
 
@@ -223,7 +250,11 @@ namespace vkmock
                 pMemory );
         }
 
-        return vk_new( pMemory, pAllocateInfo->allocationSize );
+        return vk_new(
+            pMemory,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+            pAllocateInfo->allocationSize );
     }
 
     void Device::vkFreeMemory( VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator )
@@ -268,20 +299,25 @@ namespace vkmock
                 pBuffer );
         }
 
-        return vk_new( pBuffer, *pCreateInfo );
+        return vk_new(
+            pBuffer,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+            *pCreateInfo );
     }
 
     void Device::vkDestroyBuffer( VkBuffer buffer, const VkAllocationCallbacks* pAllocator )
     {
         if( m_pMockFunctions->vkDestroyBuffer )
         {
-            m_pMockFunctions->vkDestroyBuffer(
+            return m_pMockFunctions->vkDestroyBuffer(
                 GetApiHandle(),
                 buffer,
                 pAllocator );
         }
 
-        delete buffer;
+        vk_delete( buffer,
+            vk_allocator( pAllocator, m_Allocator ) );
     }
 
     void Device::vkGetBufferMemoryRequirements( VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements )
@@ -319,7 +355,7 @@ namespace vkmock
     {
         if( m_pMockFunctions->vkGetBufferMemoryRequirements2 )
         {
-            m_pMockFunctions->vkGetBufferMemoryRequirements2(
+            return m_pMockFunctions->vkGetBufferMemoryRequirements2(
                 GetApiHandle(),
                 pInfo,
                 pMemoryRequirements );
@@ -342,7 +378,8 @@ namespace vkmock
 
         for( uint32_t i = 0; i < bindInfoCount; ++i )
         {
-            pBindInfos[ i ].buffer->m_pData = pBindInfos[ i ].memory->m_pAllocation + pBindInfos[ i ].memoryOffset;
+            pBindInfos[ i ].buffer->m_pData =
+                pBindInfos[ i ].memory->m_pAllocation + pBindInfos[ i ].memoryOffset;
         }
 
         return VK_SUCCESS;
@@ -359,20 +396,25 @@ namespace vkmock
                 pImage );
         }
 
-        return vk_new( pImage, *pCreateInfo );
+        return vk_new(
+            pImage,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+            *pCreateInfo );
     }
 
     void Device::vkDestroyImage( VkImage image, const VkAllocationCallbacks* pAllocator )
     {
         if( m_pMockFunctions->vkDestroyImage )
         {
-            m_pMockFunctions->vkDestroyImage(
+            return m_pMockFunctions->vkDestroyImage(
                 GetApiHandle(),
                 image,
                 pAllocator );
         }
 
-        delete image;
+        vk_delete( image,
+            vk_allocator( pAllocator, m_Allocator ) );
     }
 
     void Device::vkGetImageMemoryRequirements( VkImage image, VkMemoryRequirements* pMemoryRequirements )
@@ -403,6 +445,7 @@ namespace vkmock
         }
 
         image->m_pData = memory->m_pAllocation + memoryOffset;
+
         return VK_SUCCESS;
     }
 
@@ -410,7 +453,7 @@ namespace vkmock
     {
         if( m_pMockFunctions->vkGetImageMemoryRequirements2 )
         {
-            m_pMockFunctions->vkGetImageMemoryRequirements2(
+            return m_pMockFunctions->vkGetImageMemoryRequirements2(
                 GetApiHandle(),
                 pInfo,
                 pMemoryRequirements );
@@ -434,7 +477,8 @@ namespace vkmock
 
         for( uint32_t i = 0; i < bindInfoCount; ++i )
         {
-            vkBindImageMemory( pBindInfos[ i ].image, pBindInfos[ i ].memory, pBindInfos[ i ].memoryOffset );
+            pBindInfos[ i ].image->m_pData =
+                pBindInfos[ i ].memory->m_pAllocation + pBindInfos[ i ].memoryOffset;
         }
 
         return VK_SUCCESS;
@@ -452,20 +496,25 @@ namespace vkmock
                 pSwapchain );
         }
 
-        return vk_new( pSwapchain, *pCreateInfo );
+        return vk_new(
+            pSwapchain,
+            vk_allocator( pAllocator, m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT,
+            *pCreateInfo );
     }
 
     void Device::vkDestroySwapchainKHR( VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator )
     {
         if( m_pMockFunctions->vkDestroySwapchainKHR )
         {
-            m_pMockFunctions->vkDestroySwapchainKHR(
+            return m_pMockFunctions->vkDestroySwapchainKHR(
                 GetApiHandle(),
                 swapchain,
                 pAllocator );
         }
 
-        delete swapchain;
+        vk_delete( swapchain,
+            vk_allocator( pAllocator, m_Allocator ) );
     }
 
     VkResult Device::vkGetSwapchainImagesKHR( VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages )
@@ -491,6 +540,7 @@ namespace vkmock
         }
 
         pSwapchainImages[ 0 ] = swapchain->m_Image;
+
         return VK_SUCCESS;
     }
 
@@ -508,6 +558,7 @@ namespace vkmock
         }
 
         *pImageIndex = 0;
+
         return VK_SUCCESS;
     }
 
@@ -522,6 +573,7 @@ namespace vkmock
         }
 
         *pImageIndex = 0;
+
         return VK_SUCCESS;
     }
 #endif

@@ -26,6 +26,7 @@
 namespace vkmock
 {
     PhysicalDevice::PhysicalDevice( VkInstance instance )
+        : m_Instance( instance )
     {
         m_pMockFunctions = instance->m_pMockFunctions;
     }
@@ -237,6 +238,11 @@ namespace vkmock
 
     VkResult PhysicalDevice::vkCreateDevice( const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice )
     {
-        return vk_new( pDevice, GetApiHandle(), *pCreateInfo );
+        return vk_new(
+            pDevice,
+            vk_allocator( pAllocator, m_Instance->m_Allocator ),
+            VK_SYSTEM_ALLOCATION_SCOPE_DEVICE,
+            GetApiHandle(),
+            *pCreateInfo );
     }
 }

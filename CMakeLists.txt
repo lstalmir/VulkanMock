@@ -153,6 +153,7 @@ add_library (vk_mock_icd SHARED
     "Source/vk_mock_icd.h"
     "Source/vk_mock_icd.cpp"
     "Source/vk_mock_icd_helpers.h"
+    "Source/vk_mock_icd_helpers.cpp"
     "Source/vk_mock_image.h"
     "Source/vk_mock_instance.h"
     "Source/vk_mock_instance.cpp"

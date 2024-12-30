@@ -39,7 +39,7 @@ namespace vkmock
 
     VkResult Queue::vkQueueSubmit( uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence )
     {
-        if( m_pMockFunctions && m_pMockFunctions->vkQueueSubmit )
+        if( m_pMockFunctions->vkQueueSubmit )
         {
             return m_pMockFunctions->vkQueueSubmit( GetApiHandle(), submitCount, pSubmits, fence );
         }
@@ -57,7 +57,7 @@ namespace vkmock
 
     VkResult Queue::vkQueueSubmit2( uint32_t submitCount, const VkSubmitInfo2* pSubmits, VkFence fence )
     {
-        if( m_pMockFunctions && m_pMockFunctions->vkQueueSubmit2 )
+        if( m_pMockFunctions->vkQueueSubmit2 )
         {
             return m_pMockFunctions->vkQueueSubmit2( GetApiHandle(), submitCount, pSubmits, fence );
         }

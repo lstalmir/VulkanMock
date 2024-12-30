@@ -18,35 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
 #include "vk_mock_icd_helpers.h"
-#include <vulkan/vulkan.h>
-#include <vector>
 
 namespace vkmock
 {
-    struct CommandPool
-    {
-        VkAllocationCallbacks m_Allocator;
-        std::vector<VkCommandBuffer> m_CommandBuffers;
-
-        CommandPool()
-            : m_Allocator( g_CurrentAllocator )
-            , m_CommandBuffers( 0 )
-        {}
-
-        ~CommandPool()
-        {
-            std::vector<VkCommandBuffer> commandBuffers = std::move( m_CommandBuffers );
-            for( VkCommandBuffer commandBuffer : commandBuffers )
-            {
-                vk_delete( commandBuffer, g_CurrentAllocator );
-            }
-        }
+    const VkAllocationCallbacks g_DefaultAllocator = {
+        nullptr,
+        []( void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope scope ) -> void* {
+            return malloc( size );
+        },
+        []( void* pUserData, void* pMemory, size_t size, size_t alignment, VkSystemAllocationScope scope ) -> void* {
+            return realloc( pMemory, size );
+        },
+        []( void* pUserData, void* pMemory ) {
+            free( pMemory );
+        },
+        nullptr,
+        nullptr
     };
-}
 
-struct VkCommandPool_T : vkmock::CommandPool
-{
-    using CommandPool::CommandPool;
-};
+    thread_local VkAllocationCallbacks g_CurrentAllocator = g_DefaultAllocator;
+}

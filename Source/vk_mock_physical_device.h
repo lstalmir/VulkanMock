@@ -25,6 +25,8 @@ namespace vkmock
 {
     struct PhysicalDevice : PhysicalDeviceBase
     {
+        VkInstance m_Instance;
+
         PhysicalDevice( VkInstance instance );
         ~PhysicalDevice();
 

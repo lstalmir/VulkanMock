@@ -25,6 +25,7 @@ namespace vkmock
 {
     struct Device : DeviceBase
     {
+        VkAllocationCallbacks m_Allocator;
         VkPhysicalDevice m_PhysicalDevice;
         VkQueue m_Queue;
 
