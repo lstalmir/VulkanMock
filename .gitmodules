@@ -1,3 +1,6 @@
 [submodule "External/Vulkan-Headers"]
 	path = External/Vulkan-Headers
 	url = https://github.com/KhronosGroup/Vulkan-Headers
+[submodule "External/googletest"]
+	path = External/googletest
+	url = https://github.com/google/googletest
