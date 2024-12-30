@@ -24,6 +24,8 @@
 
 struct vk_mock_icd_tests : testing::Test
 {
+    VkAllocationCallbacks* allocator = nullptr;
+
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -35,8 +37,21 @@ struct vk_mock_icd_tests : testing::Test
 
     void TearDown() override
     {
-        if( device ) vkDestroyDevice( device, nullptr );
-        if( instance ) vkDestroyInstance( instance, nullptr );
+        if( device ) vkDestroyDevice( device, allocator );
+        if( instance ) vkDestroyInstance( instance, allocator );
+        if( allocator ) free( allocator );
+    }
+
+    void CreateAllocator()
+    {
+        allocator = (VkAllocationCallbacks*)malloc( sizeof( VkAllocationCallbacks ) );
+        ASSERT_NE( nullptr, allocator );
+        allocator->pfnAllocation = []( void* userData, size_t size, size_t alignment, VkSystemAllocationScope scope ) { return malloc( size ); };
+        allocator->pfnFree = []( void* userData, void* memory ) { free( memory ); };
+        allocator->pfnReallocation = []( void* userData, void* original, size_t size, size_t alignment, VkSystemAllocationScope scope ) { return realloc( original, size ); };
+        allocator->pfnInternalAllocation = nullptr;
+        allocator->pfnInternalFree = nullptr;
+        allocator->pUserData = nullptr;
     }
 
     void CreateInstance()
@@ -44,7 +59,7 @@ struct vk_mock_icd_tests : testing::Test
         VkInstanceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 
-        VkResult result = vkCreateInstance( &createInfo, nullptr, &instance );
+        VkResult result = vkCreateInstance( &createInfo, allocator, &instance );
         ASSERT_EQ( VK_SUCCESS, result );
     }
 
@@ -65,7 +80,7 @@ struct vk_mock_icd_tests : testing::Test
         deviceCreateInfo.queueCreateInfoCount = 1;
         deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
 
-        VkResult result = vkCreateDevice( physicalDevice, &deviceCreateInfo, nullptr, &device );
+        VkResult result = vkCreateDevice( physicalDevice, &deviceCreateInfo, allocator, &device );
         ASSERT_EQ( VK_SUCCESS, result );
 
         vkGetDeviceQueue( device, 0, 0, &queue );
@@ -111,6 +126,33 @@ TEST_F( vk_mock_icd_tests, vkCreateDevice )
 {
     CreateInstance();
     CreateDevice();
+}
+
+TEST_F( vk_mock_icd_tests, vkCreateBufferWithAllocator )
+{
+    CreateAllocator();
+    CreateInstance();
+    CreateDevice();
+
+    size_t allocatedSize = 0;
+    allocator->pUserData = &allocatedSize;
+    allocator->pfnAllocation = []( void* userData, size_t size, size_t alignment, VkSystemAllocationScope scope ) {
+        size_t* pAllocatedSize = reinterpret_cast<size_t*>( userData );
+        ( *pAllocatedSize ) += size;
+        return malloc( size );
+    };
+
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.size = 1024;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkResult result = vkCreateBuffer( device, &bufferCreateInfo, allocator, &buffer );
+    ASSERT_EQ( VK_SUCCESS, result );
+    ASSERT_NE( VK_NULL_HANDLE, buffer );
+    EXPECT_LT( 0, allocatedSize );
+
+    vkDestroyBuffer( device, buffer, allocator );
 }
 
 TEST_F( vk_mock_icd_tests, vkSetDeviceMockProcAddrEXT )
