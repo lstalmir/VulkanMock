@@ -33,7 +33,7 @@ endif ()
 # Mock ICD
 project (vk_mock CXX)
 
-option (BUILD_TSETS "Build Vulkan(R) mock ICD tests" ON)
+option (BUILD_TESTS "Build Vulkan(R) mock ICD tests" ON)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set (VK_MOCK_ICD_ARCH 64)
@@ -205,7 +205,7 @@ if (UNIX)
 endif ()
 
 # Build tests
-if (BUILD_TSETS)
+if (BUILD_TESTS)
     find_package (Vulkan REQUIRED)
     add_subdirectory (External/googletest EXCLUDE_FROM_ALL)
 
